@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Dead Cap Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #06090f;
+    --bg-primary: #0b1120;
+    --bg-card: #111a2e;
+    --bg-row-alt: #0e1528;
+    --bg-row-hover: #162040;
+    --bg-expanded: #0d1424;
+    --bg-expanded-alt: #101828;
+    --bg-expanded-hover: #142038;
+    --border: #1c2a48;
+    --border-light: #243356;
+    --text-bright: #edf2fc;
+    --text-primary: #c5cfdf;
+    --text-secondary: #7b8ba8;
+    --text-muted: #4a5a78;
+    --accent-gold: #f0b840;
+    --accent-cyan: #38bdf8;
+    --accent-red: #ef6461;
+    --accent-orange: #f59e0b;
+    --high: #ef6461;
+    --mid: #f0b840;
+    --low: #4a90e2;
+    --zero: #3a4a68;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+  }
+
+  .page-header {
+    padding: 44px 32px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #0e1a35 0%, var(--bg-deep) 100%);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, rgba(240,184,64,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .page-header h1 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 2.8rem;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--text-bright);
+    position: relative;
+  }
+
+  .page-header h1 span {
+    background: linear-gradient(135deg, var(--accent-gold), var(--accent-orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .page-header .subtitle { display: none; }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 18px 32px 6px;
+    flex-wrap: wrap;
+  }
+
+  .controls button {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    padding: 7px 20px;
+    border: 1px solid var(--border-light);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .controls button:hover {
+    background: var(--accent-gold);
+    color: var(--bg-deep);
+    border-color: var(--accent-gold);
+  }
+
+  .sort-info {
+    text-align: center;
+    padding: 8px 32px 14px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 100px 20px;
+    gap: 18px;
+  }
+
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent-gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading p {
+    color: var(--text-secondary);
+    font-family: 'Oswald', sans-serif;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    padding: 0 16px 50px;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  thead th:first-child, tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+  }
+  thead th:first-child { z-index: 25; }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    background: var(--bg-primary);
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    font-size: 0.78rem;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 14px 16px 12px;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 2px solid var(--accent-gold);
+    user-select: none;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  thead th:hover { color: var(--accent-cyan); }
+
+  thead th:first-child {
+    background: var(--bg-primary);
+    text-align: left;
+    padding-left: 20px;
+    min-width: 220px;
+  }
+
+  thead th .sort-arrow {
+    font-size: 0.55rem;
+    margin-left: 4px;
+    opacity: 0.3;
+  }
+
+  thead th.sort-active .sort-arrow { opacity: 1; color: var(--accent-gold); }
+
+  thead th.year-col { min-width: 120px; }
+
+  thead th.total-col {
+    color: var(--text-bright);
+    border-left: 2px solid var(--border-light);
+  }
+
+  td.total-cell {
+    border-left: 2px solid var(--border-light);
+    font-weight: 700 !important;
+  }
+
+  /* TEAM ROWS */
+  tbody tr.team-row {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+
+  tbody tr.team-row:nth-child(odd) { background: var(--bg-deep); }
+  tbody tr.team-row:nth-child(even) { background: var(--bg-row-alt); }
+  tbody tr.team-row:hover { background: var(--bg-row-hover); }
+
+  tbody tr.team-row td {
+    padding: 13px 16px;
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  tbody tr.team-row td:first-child {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    letter-spacing: 1px;
+    color: var(--text-primary);
+    text-align: left;
+    padding-left: 20px;
+    background: inherit;
+  }
+
+  tbody tr.team-row:hover td:first-child { background: var(--bg-row-hover); }
+
+  .team-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .caret {
+    display: inline-block;
+    font-size: 0.5rem;
+    color: var(--text-muted);
+    transition: transform 0.25s, color 0.2s;
+    flex-shrink: 0;
+  }
+
+  tr.team-row.expanded .caret {
+    transform: rotate(90deg);
+    color: var(--accent-gold);
+  }
+
+  tr.team-row.expanded td:first-child { color: var(--accent-gold); }
+
+  /* PLAYER DETAIL ROWS */
+  tbody tr.player-row {
+    display: none;
+    border-bottom: 1px solid rgba(28, 42, 72, 0.4);
+    transition: background 0.12s;
+  }
+
+  tbody tr.player-row.show { display: table-row; }
+
+  tbody tr.player-row { background: var(--bg-expanded); }
+  tbody tr.player-row:nth-child(even) { background: var(--bg-expanded-alt); }
+  tbody tr.player-row:hover { background: var(--bg-expanded-hover); }
+
+  tbody tr.player-row td {
+    padding: 8px 16px;
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.76rem;
+    font-weight: 400;
+    white-space: nowrap;
+    color: var(--text-secondary);
+  }
+
+  tbody tr.player-row td:first-child {
+    font-family: 'Barlow', sans-serif;
+    font-weight: 400;
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+    text-align: left;
+    padding-left: 44px;
+    background: inherit;
+  }
+
+  tbody tr.player-row:hover td:first-child { background: var(--bg-expanded-hover); }
+
+  .amt-high { color: var(--high); }
+  .amt-mid { color: var(--mid); }
+  .amt-low { color: var(--low); }
+  .amt-zero { color: var(--zero); }
+
+  @media (max-width: 768px) {
+    .page-header h1 { font-size: 1.8rem; letter-spacing: 3px; }
+    .page-header { padding: 28px 16px 18px; }
+    .table-wrapper { padding: 0 6px 30px; }
+    thead th:first-child, tbody td:first-child { min-width: 160px; }
+  }
+
+  ::-webkit-scrollbar { width: 7px; height: 7px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>NBA <span>Dead Cap</span> Tracker</h1>
+  <p class="subtitle"></p>
+</div>
+
+<div class="controls">
+  <button onclick="collapseAll()">By Team</button>
+  <button onclick="expandAll()">By Team and Player</button>
+</div>
+
+<div id="app">
+  <div class="loading"><div class="spinner"></div><p>Loading&hellip;</p></div>
+</div>
+
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRTwTOS_rNBYI8d8zDUivGFWXsXcxlOZgrqn5o-WCvFC5aNAR3vLsSqllE7aO0BRw/pub?gid=829871333&single=true&output=csv';
+
+const FALLBACK_B64 = `VGVhbSxQbGF5ZXIsRGVhZCBDYXAgSGl0IDIwMjUtMjAyNixEZWFkIENhcCBIaXQgMjAyNi0yMDI3LERlYWQgQ2FwIEhpdCAyMDI3LTIwMjgsRGVhZCBDYXAgSGl0IDIwMjgtMjAyOSxEZWFkIENhcCBIaXQgMjAyOS0yMDMwLElELCwsVGVhbSxEZWFkIENhcCBIaXQgMjAyNS0yMDI2LERlYWQgQ2FwIEhpdCAyMDI2LTIwMjcsRGVhZCBDYXAgSGl0IDIwMjctMjAyOCxEZWFkIENhcCBIaXQgMjAyOC0yMDI5LERlYWQgQ2FwIEhpdCAyMDI5LTIwMzANCkF0bGFudGEgSGF3a3MsRHVvcCBSZWF0aCwiICQgMiwyMjEsNjc3ICIsLCwsLEF0bGFudGEgSGF3a3NEdW9wIFJlYXRoLDEsLENoYXJsb3R0ZSBIb3JuZXRzLCIgJCAzMCwyNDMsMDIzICIsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgIA0KQXRsYW50YSBIYXdrcyxOJ0ZhbHkgRGFudGUsIiAkIDIsMDQ4LDQ5MSAiLCwsLCxBdGxhbnRhIEhhd2tzTidGYWx5IERhbnRlLDEsLE1pbHdhdWtlZSBCdWNrcywiICQgMjksNDgzLDM4OSAiLCIgJCAyMywxODMsMjcwICIsIiAkIDIzLDE4MywyNzAgIiwiICQgMjIsNTE2LDYwMyAiLCIgJCAyMiw1MTYsNjAzICINCkJyb29rbHluIE5ldHMsS2VvbiBKb2huc29uLCIgJCAyNzEsNjE0ICIsLCwsLEJyb29rbHluIE5ldHNLZW9uIEpvaG5zb24sMSwsUG9ydGxhbmQgVHJhaWwgQmxhemVycywiICQgMjUsODE4LDg0NSAiLCIgJCAyNjgsMDMyICIsICQgLSAgICwgJCAtICAgLCAkIC0gICANCkJyb29rbHluIE5ldHMsRCdBbmRyZSBEYXZpcywiICQgODUsMzAwICIsLCwsLEJyb29rbHluIE5ldHNEJ0FuZHJlIERhdmlzLDEsLEJyb29rbHluIE5ldHMsIiAkIDI0LDIzMSwyNDAgIiwgJCAtICAgLCAkIC0gICAsICQgLSAgICwgJCAtICAgDQpCcm9va2x5biBOZXRzLERhdmlkIE11b2thLCIgJCA4NSwzMDAgIiwsLCwsQnJvb2tseW4gTmV0c0RhdmlkIE11b2thLDEsLFdhc2hpbmd0b24gV2l6YXJkcywiICQgMjMsNTY1LDgzNCAiLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICANCkJyb29rbHluIE5ldHMsRGFyaXEgV2hpdGVoZWFkLCIgJCAzLDI2Miw1NjAgIiwsLCwsQnJvb2tseW4gTmV0c0RhcmlxIFdoaXRlaGVhZCwxLCxQaG9lbml4IFN1bnMsIiAkIDIzLDE5NywwNTAgIiwiICQgMjMsMTk3LDA1MCAiLCIgJCAyMiw0OTAsMTUyICIsIiAkIDIyLDQ5MCwxNTIgIiwiICQgMTksMzgzLDAwOSAiDQpCcm9va2x5biBOZXRzLEtvYmUgQnVma2luLCIgJCA0LDUwMyw3MjAgIiwsLCwsQnJvb2tseW4gTmV0c0tvYmUgQnVma2luLDEsLFV0YWggSmF6eiwiICQgMjIsOTQ3LDgzMiAiLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICANCkJyb29rbHluIE5ldHMsSGF5d29vZCBIaWdoc21pdGgsIiAkIDUsNjE2LDAwMCAiLCwsLCxCcm9va2x5biBOZXRzSGF5d29vZCBIaWdoc21pdGgsMSwsTWVtcGhpcyBHcml6emxpZXMsIiAkIDE1LDE4OCwyMDEgIiwiICQgNCwxNjQsMDUwICIsIiAkIDMsNzAwLDAwMCAiLCAkIC0gICAsICQgLSAgIA0KQnJvb2tseW4gTmV0cyxDYW0gVGhvbWFzLCIgJCA1LDk5MywxNzIgIiwsLCwsQnJvb2tseW4gTmV0c0NhbSBUaG9tYXMsMSwsRGV0cm9pdCBQaXN0b25zLCIgJCA3LDM4MSw3NzcgIiwgJCAtICAgLCAkIC0gICAsICQgLSAgICwgJCAtICAgDQpCcm9va2x5biBOZXRzLFR5cmVzZSBNYXJ0aW4sIiAkIDIsMTkxLDg5NyAiLCwsLCxCcm9va2x5biBOZXRzVHlyZXNlIE1hcnRpbiwxLCxTYW4gQW50b25pbyBTcHVycywiICQgNywwOTYsMjMxICIsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgIA0KQnJvb2tseW4gTmV0cyxIdW50ZXIgVHlzb24sIiAkIDIsMjIxLDY3NyAiLCwsLCxCcm9va2x5biBOZXRzSHVudGVyIFR5c29uLDEsLENoaWNhZ28gQnVsbHMsIiAkIDYsODA5LDUyNCAiLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICANCkNoYXJsb3R0ZSBIb3JuZXRzLE5pY2sgU21pdGggSnIsIiAkIDIsNzEwLDY4MCAiLCwsLCxDaGFybG90dGUgSG9ybmV0c05pY2sgU21pdGggSnIsMSwsTmV3IE9ybGVhbnMgUGVsaWNhbnMsIiAkIDUsNDY5LDg1MCAiLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICANCkNoYXJsb3R0ZSBIb3JuZXRzLFNwZW5jZXIgRGlud2lkZGllLCIgJCAyLDI5NiwyNzEgIiwsLCwsQ2hhcmxvdHRlIEhvcm5ldHNTcGVuY2VyIERpbndpZGRpZSwxLCxJbmRpYW5hIFBhY2VycywiICQgNCw1NDAsNzIwICIsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgIA0KQ2hhcmxvdHRlIEhvcm5ldHMsUGF0IENvbm5hdWdodG9uLCIgJCA5LDUwMCwwMDAgIiwsLCwsQ2hhcmxvdHRlIEhvcm5ldHNQYXQgQ29ubmF1Z2h0b24sMSwsQXRsYW50YSBIYXdrcywiICQgNCwyNzAsMTY4ICIsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgIA0KQ2hhcmxvdHRlIEhvcm5ldHMsTWlrZSBDb25sZXksIiAkIDEwLDc3NCwwMzkgIiwsLCwsQ2hhcmxvdHRlIEhvcm5ldHNNaWtlIENvbmxleSwxLCxEYWxsYXMgTWF2ZXJpY2tzLCIgJCAzLDM0MywxODYgIiwiICQgMywyMTEsMjE2ICIsIiAkIDEsMDAyLDM2MCAiLCIgJCAxLDAwMiwzNjAgIiwgJCAtICAgDQpDaGFybG90dGUgSG9ybmV0cyxNYWxha2kgQnJhbmhhbSwiICQgNCw5NjIsMDMzICIsLCwsLENoYXJsb3R0ZSBIb3JuZXRzTWFsYWtpIEJyYW5oYW0sMSwsVG9yb250byBSYXB0b3JzLCIgJCAyLDQ3MywzMzUgIiwgJCAtICAgLCAkIC0gICAsICQgLSAgICwgJCAtICAgDQpDaGljYWdvIEJ1bGxzLEpldm9uIENhcnRlciwiICQgNiw4MDksNTI0ICIsLCwsLENoaWNhZ28gQnVsbHNKZXZvbiBDYXJ0ZXIsMSwsT2tsYWhvbWEgQ2l0eSBUaHVuZGVyLCIgJCAyLDI5NiwyNzEgIiwgJCAtICAgLCAkIC0gICAsICQgLSAgICwgJCAtICAgDQpDbGV2ZWxhbmQgQ2F2YWxpZXJzLFJpY2t5IFJ1YmlvLCIgJCA0MjQsNjcyICIsIiAkIDQyNCw2NzIgIiwsLCxDbGV2ZWxhbmQgQ2F2YWxpZXJzUmlja3kgUnViaW8sMSwsQ2xldmVsYW5kIENhdmFsaWVycywiICQgNDI0LDY3MiAiLCIgJCA0MjQsNjcyICIsICQgLSAgICwgJCAtICAgLCAkIC0gICANCkRhbGxhcyBNYXZlcmlja3MsSmFWYWxlIE1jR2VlLCIgJCAyLDIwOCw4NTYgIiwiICQgMiwyMDgsODU2ICIsLCwsRGFsbGFzIE1hdmVyaWNrc0phVmFsZSBNY0dlZSwxLCxHb2xkZW4gU3RhdGUgV2FycmlvcnMsIiAkIDMwNiw0NDcgIiwgJCAtICAgLCAkIC0gICAsICQgLSAgICwgJCAtICAgDQpEYWxsYXMgTWF2ZXJpY2tzLE9saXZpZXIgTWF4ZW5jZSBQcm9zcGVyLCIgJCAxLDAwMiwzNjAgIiwiICQgMSwwMDIsMzYwICIsIiAkIDEsMDAyLDM2MCAiLCIgJCAxLDAwMiwzNjAgIiwsRGFsbGFzIE1hdmVyaWNrc09saXZpZXIgTWF4ZW5jZSBQcm9zcGVyLDEsLExvcyBBbmdlbGVzIExha2VycywiICQgMTMxLDk3MCAiLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICANCkRhbGxhcyBNYXZlcmlja3MsSmVyZW1pYWggUm9iaW5zb24tRWFybCwiICQgMTMxLDk3MCAiLCwsLCxEYWxsYXMgTWF2ZXJpY2tzSmVyZW1pYWggUm9iaW5zb24tRWFybCwxLCxQaGlsYWRlbHBoaWEgNzZlcnMsIiAkIDEzMSw5NzAgIiwgJCAtICAgLCAkIC0gICAsICQgLSAgICwgJCAtICAgDQpEZXRyb2l0IFBpc3RvbnMsSXNhYWMgSm9uZXMsIiAkIDEsOTU1LDM3NyAiLCwsLCxEZXRyb2l0IFBpc3RvbnNJc2FhYyBKb25lcywxLCxCb3N0b24gQ2VsdGljcywgJCAtICAgLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICANCkRldHJvaXQgUGlzdG9ucyxEYXJpbyBTYXJpYywiICQgNSw0MjYsNDAwICIsLCwsLERldHJvaXQgUGlzdG9uc0RhcmlvIFNhcmljLDEsLERlbnZlciBOdWdnZXRzLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgIA0KR29sZGVuIFN0YXRlIFdhcnJpb3JzLEtldmluIEtub3gsIiAkIDIzOSw5NDQgIiwsLCwsR29sZGVuIFN0YXRlIFdhcnJpb3JzS2V2aW4gS25veCwxLCxIb3VzdG9uIFJvY2tldHMsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgICwgJCAtICAgDQpHb2xkZW4gU3RhdGUgV2FycmlvcnMsWXVyaSBDb2xsaW5zLCIgJCA2Niw1MDMgIiwsLCwsR29sZGVuIFN0YXRlIFdhcnJpb3JzWXVyaSBDb2xsaW5zLDEsLExvcyBBbmdlbGVzIENsaXBwZXJzLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgIA0KSW5kaWFuYSBQYWNlcnMsSmFtZXMgV2lzZW1hbiwiICQgMSwxMzEsOTcwICIsLCwsLEluZGlhbmEgUGFjZXJzSmFtZXMgV2lzZW1hbiwxLCxNaWFtaSBIZWF0LCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgIA0KSW5kaWFuYSBQYWNlcnMsTWFjIE1jQ2x1bmcsIiAkIDE2NCwwNjAgIiwsLCwsSW5kaWFuYSBQYWNlcnNNYWMgTWNDbHVuZywxLCxNaW5uZXNvdGEgVGltYmVyd29sdmVzLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgIA0KSW5kaWFuYSBQYWNlcnMsSmVyZW1pYWggUm9iaW5zb24tRWFybCwiICQgNTg5LDMwNCAiLCwsLCxJbmRpYW5hIFBhY2Vyc0plcmVtaWFoIFJvYmluc29uLUVhcmwsMSwsTmV3IFlvcmsgS25pY2tzLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgIA0KSW5kaWFuYSBQYWNlcnMsQ29keSBNYXJ0aW4sIiAkIDEzMSw5NzAgIiwsLCwsSW5kaWFuYSBQYWNlcnNDb2R5IE1hcnRpbiwxLCxPcmxhbmRvIE1hZ2ljLCAkIC0gICAsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgIA0KSW5kaWFuYSBQYWNlcnMsTW9udGUgTW9ycmlzLCIgJCAyODksODA0ICIsLCwsLEluZGlhbmEgUGFjZXJzTW9udGUgTW9ycmlzLDEsLFNhY3JhbWVudG8gS2luZ3MsICQgLSAgICwgJCAtICAgLCAkIC0gICAsICQgLSAgICwgJCAtICAgDQpJbmRpYW5hIFBhY2VycyxHYXJyaXNvbiBNYXRoZXdzLCIgJCA1NjEsMjk0ICIsLCwsLEluZGlhbmEgUGFjZXJzR2Fycmlzb24gTWF0aGV3cywxLCwsLCwsLA0KSW5kaWFuYSBQYWNlcnMsR2FiZSBNY0dsb3RoYW4sIiAkIDczLDE1MyAiLCwsLCxJbmRpYW5hIFBhY2Vyc0dhYmUgTWNHbG90aGFuLDEsLCwsLCwsDQpJbmRpYW5hIFBhY2VycyxUb255IEJyYWRsZXksIiAkIDEsNTk5LDE2NSAiLCwsLCxJbmRpYW5hIFBhY2Vyc1RvbnkgQnJhZGxleSwxLCwsLCwsLA0KTG9zIEFuZ2VsZXMgTGFrZXJzLEtvYmUgQnVma2luLCIgJCAxMzEsOTcwICIsLCwsLExvcyBBbmdlbGVzIExha2Vyc0tvYmUgQnVma2luLDEsLCwsLCwsDQpNZW1waGlzIEdyaXp6bGllcyxDb2xlIEFudGhvbnksIiAkIDMsNzAwLDAwMCAiLCIgJCAzLDcwMCwwMDAgIiwiICQgMyw3MDAsMDAwICIsLCxNZW1waGlzIEdyaXp6bGllc0NvbGUgQW50aG9ueSwxLCwsLCwsLA0KTWVtcGhpcyBHcml6emxpZXMsTWFtYWRpIERpYWtpdGUsIiAkIDQ2NCwwNTAgIiwiICQgNDY0LDA1MCAiLCwsLE1lbXBoaXMgR3JpenpsaWVzTWFtYWRpIERpYWtpdGUsMSwsLCwsLCwNCk1lbXBoaXMgR3JpenpsaWVzLENoYXJsZXMgQmFzc2V5LCIgJCAxMzEsOTcwICIsLCwsLE1lbXBoaXMgR3JpenpsaWVzQ2hhcmxlcyBCYXNzZXksMSwsLCwsLCwNCk1lbXBoaXMgR3JpenpsaWVzLEtvYmUgQnVma2luLCIgJCAxMzEsOTcwICIsLCwsLE1lbXBoaXMgR3JpenpsaWVzS29iZSBCdWZraW4sMSwsLCwsLCwNCk1lbXBoaXMgR3JpenpsaWVzLENocmlzdGlhbiBLb2xva28sIiAkIDI2Myw5NDAgIiwsLCwsTWVtcGhpcyBHcml6emxpZXNDaHJpc3RpYW4gS29sb2tvLDEsLCwsLCwsDQpNZW1waGlzIEdyaXp6bGllcyxHZW9yZ2VzIE5pYW5nLCIgJCA4LDIwMCwwMDAgIiwsLCwsTWVtcGhpcyBHcml6emxpZXNHZW9yZ2VzIE5pYW5nLDEsLCwsLCwsDQpNZW1waGlzIEdyaXp6bGllcyxFcmljIEdvcmRvbiwiICQgMiwyOTYsMjcxICIsLCwsLE1lbXBoaXMgR3JpenpsaWVzRXJpYyBHb3Jkb24sMSwsLCwsLCwNCk1pbHdhdWtlZSBCdWNrcyxEYW1pYW4gTGlsbGFyZCwiICQgMjIsNTE2LDYwMyAiLCIgJCAyMiw1MTYsNjAzICIsIiAkIDIyLDUxNiw2MDMgIiwiICQgMjIsNTE2LDYwMyAiLCIgJCAyMiw1MTYsNjAzICIsTWlsd2F1a2VlIEJ1Y2tzRGFtaWFuIExpbGxhcmQsMSwsLCwsLCwNCk1pbHdhdWtlZSBCdWNrcyxWYXNpbGlqZSBNaWNpYywiICQgNjY2LDY2NyAiLCIgJCA2NjYsNjY3ICIsIiAkIDY2Niw2NjcgIiwsLE1pbHdhdWtlZSBCdWNrc1Zhc2lsaWplIE1pY2ljLDEsLCwsLCwsDQpNaWx3YXVrZWUgQnVja3MsQ2hyaXMgTGl2aW5nc3RvbiwiICQgMiwyOTYsMjcxICIsLCwsLE1pbHdhdWtlZSBCdWNrc0NocmlzIExpdmluZ3N0b24sMSwsLCwsLCwNCk1pbHdhdWtlZSBCdWNrcyxUeWxlciBTbWl0aCwiICQgMSw5NTUsMzU3ICIsLCwsLE1pbHdhdWtlZSBCdWNrc1R5bGVyIFNtaXRoLDEsLCwsLCwsDQpNaWx3YXVrZWUgQnVja3MsTmlnZWwgSGF5ZXMtRGF2aXMsIiAkIDIsMDQ4LDQ5MSAiLCwsLCxNaWx3YXVrZWUgQnVja3NOaWdlbCBIYXllcy1EYXZpcywxLCwsLCwsDA0KTmV3IE9ybGVhbnMgUGVsaWNhbnMsSmFkZW4gU3ByaW5nZXIsIiAkIDcwLDczMiAiLCwsLCxOZXcgT3JsZWFucyBQZWxpY2Fuc0phZGVuIFNwcmluZ2VyLDEsLCwsLCwsDQpOZXcgT3JsZWFucyBQZWxpY2FucyxEYWxlbiBUZXJyeSwiICQgNSwzOTksMTE4ICIsLCwsLE5ldyBPcmxlYW5zIFBlbGljYW5zRGFsZW4gVGVycnksMSwsLCwsLCwNCk9rbGFob21hIENpdHkgVGh1bmRlcixNYXNvbiBQbHVtbGVlLCIgJCAyLDI5NiwyNzEgIiwsLCwsT2tsYWhvbWEgQ2l0eSBUaHVuZGVyTWFzb24gUGx1bWxlZSwxLCwsLCwsLA0KUGhpbGFkZWxwaGlhIDc2ZXJzLENoYXJsZXMgQmFzc2V5LCIgJCAxMzEsOTcwICIsLCwsLFBoaWxhZGVscGhpYSA3NmVyc0NoYXJsZXMgQmFzc2V5LDEsLCwsLCwsDQpQaG9lbml4IFN1bnMsQnJhZGxleSBCZWFsLCIgJCAxOSwzODMsMDA5ICIsIiAkIDE5LDM4MywwMDkgIiwiICQgMTksMzgzLDAwOSAiLCIgJCAxOSwzODMsMDA5ICIsIiAkIDE5LDM4MywwMDkgIixQaG9lbml4IFN1bnNCcmFkbGV5IEJlYWwsMSwsLCwsLCwNClBob2VuaXggU3VucyxOYXNzaXIgTGl0dGxlLCIgJCAzLDEwNywxNDMgIiwiICQgMywxMDcsMTQzICIsIiAkIDMsMTA3LDE0MyAiLCIgJCAzLDEwNywxNDMgIiwsUGhvZW5peCBTdW5zTmFzc2lyIExpdHRsZSwxLCwsLCwsDA0KUGhvZW5peCBTdW5zLEVKIExpZGRlbGwsIiAkIDcwNiw4OTggIiwiICQgNzA2LDg5OCAiLCwsLFBob2VuaXggU3Vuc0VKIExpZGRlbGwsMSwsLCwsLCwNClBvcnRsYW5kIFRyYWlsIEJsYXplcnMsRGVhbmRyZSBBeXRvbiwiICQgMjUsNTUwLDgxMyAiLCwsLCxQb3J0bGFuZCBUcmFpbCBCbGF6ZXJzRGVhbmRyZSBBeXRvbiwxLCwsLCwsDA0KUG9ydGxhbmQgVHJhaWwgQmxhemVycyxEaWRpIExvdXphZGEsIiAkIDI2OCwwMzIgIiwiICQgMjY4LDAzMiAiLCwsLFBvcnRsYW5kIFRyYWlsIEJsYXplcnNEaWRpIExvdXphZGEsMSwsLCwsLCwNClRvcm9udG8gUmFwdG9ycyxNbyBCYW1iYSwiICQgMTc3LDA2NCAiLCwsLCxUb3JvbnRvIFJhcHRvcnNNbyBCYW1iYSwxLCwsLCwsDA0KVG9yb250byBSYXB0b3JzLENocmlzIFBhdWwsIiAkIDIsMjk2LDI3MSAiLCwsLCxUb3JvbnRvIFJhcHRvcnNDaHJpcyBQYXVsLDEsLCwsLCwsDQpVdGFoIEphenosSm9yZGFuIENsYXJrc29uLCIgJCAxMCw2NTEsNTYxICIsLCwsLFV0YWggSmF6ekpvcmRhbiBDbGFya3NvbiwxLCwsLCwsDA0KVXRhaCBKYXp6LExvbnpvIEJhbGwsIiAkIDEwLDAwMCwwMDAgIiwsLCwsVXRhaCBKYXp6TG9uem8gQmFsbCwxLCwsLCwsDA0KVXRhaCBKYXp6LENocmlzIEJvdWNoZXIsIiAkIDIsMjk2LDI3MSAiLCwsLCxVdGFoIEphenpDaHJpcyBCb3VjaGVyLDEsLCwsLCwsDQpXYXNoaW5ndG9uIFdpemFyZHMsUmljaGF1biBIb2xtZXMsIiAkIDI1MCwwMDAgIiwsLCwsV2FzaGluZ3RvbiBXaXphcmRzUmljaGF1biBIb2xtZXMsMSwsLCwsLCwNCldhc2hpbmd0b24gV2l6YXJkcyxNYXJjdXMgU21hcnQsIiAkIDE0LDc4Niw4NTUgIiwsLCwsV2FzaGluZ3RvbiBXaXphcmRzTWFyY3VzIFNtYXJ0LDEsLCwsLCwsDQpXYXNoaW5ndG9uIFdpemFyZHMsQmxha2UgV2VzbGV5LCIgJCAzLDM0Nyw0NTggIiwsLCwsV2FzaGluZ3RvbiBXaXphcmRzQmxha2UgV2VzbGV5LDEsLCwsLCwsDQpXYXNoaW5ndG9uIFdpemFyZHMsRGlsbG9uIEpvbmVzLCIgJCAyLDc1MywyODAgIiwsLCwsV2FzaGluZ3RvbiBXaXphcmRzRGlsbG9uIEpvbmVzLDEsLCwsLCwsDQpXYXNoaW5ndG9uIFdpemFyZHMsU2thbCBMYWJpc3NpZXJlLCIgJCAxMzEsOTcwICIsLCwsLFdhc2hpbmd0b24gV2l6YXJkc1NrYWwgTGFiaXNzaWVyZSwxLCwsLCwsDA0KV2FzaGluZ3RvbiBXaXphcmRzLERhbnRlIEV4dW0sIiAkIDIsMjk2LDI3MSAiLCwsLCxXYXNoaW5ndG9uIFdpemFyZHNEYW50ZSBFeHVtLDEsLCwsLCwsDQpTYW4gQW50b25pbyBTcHVycyxKZXJlbXkgU29jaGFuLCIgJCA3LDA5NiwyMzEgIiwsLCwsU2FuIEFudG9uaW8gU3B1cnNKZXJlbXkgU29jaGFuLDEsLCwsLCws`;
+
+const YEAR_LABELS = ["'25-'26","'26-'27","'27-'28","'28-'29","'29-'30"];
+
+let teamMap = {};
+let sortedTeams = [];
+let expandedSet = new Set();
+let currentSort = { col: 0, dir: 'desc' }; // 0=25-26 year index, 'team' for alpha
+
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { result.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+function parseMoney(s) {
+  if (!s) return 0;
+  const c = s.replace(/[$,\s]/g, '').replace(/[()]/g, '');
+  if (c === '-' || c === '') return 0;
+  const n = parseFloat(c);
+  return isNaN(n) ? 0 : n;
+}
+
+function formatMoney(n) {
+  if (n === 0) return '\u2014';
+  return '$' + n.toLocaleString('en-US');
+}
+
+function amtClass(n) {
+  if (n === 0) return 'amt-zero';
+  if (n >= 15e6) return 'amt-high';
+  if (n >= 5e6) return 'amt-mid';
+  return 'amt-low';
+}
+
+function escKey(s) { return s.replace(/[^a-zA-Z0-9]/g, '_'); }
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function parseData(csv) {
+  const lines = csv.split('\n').map(l => l.replace(/\r/,''));
+  teamMap = {};
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = parseCSVLine(lines[i]);
+    const team = (cols[0] || '').trim();
+    const player = (cols[1] || '').trim();
+    if (!team || !player) continue;
+
+    if (!teamMap[team]) teamMap[team] = { players: [], totals: [0,0,0,0,0] };
+
+    const amounts = [];
+    for (let y = 0; y < 5; y++) {
+      const val = parseMoney(cols[2 + y]);
+      amounts.push(val);
+      teamMap[team].totals[y] += val;
+    }
+    teamMap[team].players.push({ name: player, amounts });
+  }
+
+  Object.values(teamMap).forEach(t => {
+    t.players.sort((a,b) => b.amounts[0] - a.amounts[0]);
+  });
+
+  applySorting();
+}
+
+function applySorting() {
+  const teams = Object.keys(teamMap);
+  if (currentSort.col === 'team') {
+    teams.sort((a,b) => currentSort.dir === 'asc' ? a.localeCompare(b) : b.localeCompare(a));
+  } else if (currentSort.col === 'total') {
+    const getTotal = t => teamMap[t].totals.reduce((a,b) => a+b, 0);
+    teams.sort((a,b) => currentSort.dir === 'desc' ? getTotal(b) - getTotal(a) : getTotal(a) - getTotal(b));
+  } else {
+    const yi = currentSort.col;
+    teams.sort((a,b) => currentSort.dir === 'desc' ? teamMap[b].totals[yi] - teamMap[a].totals[yi] : teamMap[a].totals[yi] - teamMap[b].totals[yi]);
+  }
+  sortedTeams = teams;
+}
+
+function sortBy(col) {
+  if (currentSort.col === col) {
+    // Toggle direction
+    if (col === 'team') {
+      currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSort.dir = currentSort.dir === 'desc' ? 'asc' : 'desc';
+    }
+  } else {
+    currentSort.col = col;
+    currentSort.dir = col === 'team' ? 'asc' : 'desc';
+  }
+  applySorting();
+  render();
+}
+
+function render() {
+  if (sortedTeams.length === 0) {
+    document.getElementById('app').innerHTML = '<div style="text-align:center;padding:80px;color:var(--accent-red)">No data found.</div>';
+    return;
+  }
+
+  let html = '<div class="table-wrapper"><table><thead><tr>';
+
+  // Team header
+  const teamActive = currentSort.col === 'team' ? ' sort-active' : '';
+  const teamArrow = currentSort.col === 'team' ? (currentSort.dir === 'asc' ? '\u25B2' : '\u25BC') : '\u25B2';
+  html += '<th class="' + teamActive + '" onclick="sortBy(\'team\')">Team <span class="sort-arrow">' + teamArrow + '</span></th>';
+
+  // Year headers
+  YEAR_LABELS.forEach((l, yi) => {
+    const active = currentSort.col === yi ? ' sort-active' : '';
+    const arrow = currentSort.col === yi ? (currentSort.dir === 'desc' ? '\u25BC' : '\u25B2') : '\u25BC';
+    html += '<th class="year-col' + active + '" onclick="sortBy(' + yi + ')">' + l + ' <span class="sort-arrow">' + arrow + '</span></th>';
+  });
+
+  // Total header
+  const totActive = currentSort.col === 'total' ? ' sort-active' : '';
+  const totArrow = currentSort.col === 'total' ? (currentSort.dir === 'desc' ? '\u25BC' : '\u25B2') : '\u25BC';
+  html += '<th class="year-col total-col' + totActive + '" onclick="sortBy(\'total\')">Total <span class="sort-arrow">' + totArrow + '</span></th>';
+  html += '</tr></thead><tbody>';
+
+  sortedTeams.forEach(team => {
+    const key = escKey(team);
+    const t = teamMap[team];
+    const grand = t.totals.reduce((a,b) => a+b, 0);
+
+    html += '<tr class="team-row" data-team="' + key + '" onclick="toggleTeam(\'' + key + '\')">';
+    html += '<td><div class="team-name-cell"><span class="caret">&#9654;</span> ' + escHtml(team) + '</div></td>';
+    t.totals.forEach(val => {
+      html += '<td><span class="' + amtClass(val) + '">' + formatMoney(val) + '</span></td>';
+    });
+    html += '<td class="total-cell"><span class="' + amtClass(grand/5) + '">' + formatMoney(grand) + '</span></td>';
+    html += '</tr>';
+
+    t.players.forEach(p => {
+      const pg = p.amounts.reduce((a,b) => a+b, 0);
+      html += '<tr class="player-row" data-team="' + key + '">';
+      html += '<td>' + escHtml(p.name) + '</td>';
+      p.amounts.forEach(val => {
+        html += '<td><span class="' + amtClass(val) + '">' + formatMoney(val) + '</span></td>';
+      });
+      html += '<td class="total-cell"><span class="' + amtClass(pg/5) + '">' + formatMoney(pg) + '</span></td>';
+      html += '</tr>';
+    });
+  });
+
+  html += '</tbody></table></div>';
+  document.getElementById('app').innerHTML = html;
+  updateVisibility();
+}
+
+function toggleTeam(key) {
+  if (expandedSet.has(key)) expandedSet.delete(key);
+  else expandedSet.add(key);
+  updateVisibility();
+}
+
+function expandAll() {
+  sortedTeams.forEach(t => expandedSet.add(escKey(t)));
+  updateVisibility();
+}
+
+function collapseAll() {
+  expandedSet.clear();
+  updateVisibility();
+}
+
+function updateVisibility() {
+  document.querySelectorAll('tr.player-row').forEach(el => {
+    el.classList.toggle('show', expandedSet.has(el.dataset.team));
+  });
+  document.querySelectorAll('tr.team-row').forEach(tr => {
+    tr.classList.toggle('expanded', expandedSet.has(tr.dataset.team));
+  });
+}
+
+function loadFallback() {
+  try {
+    const csv = atob(FALLBACK_B64);
+    parseData(csv);
+    render();
+  } catch(e) {
+    document.getElementById('app').innerHTML = '<div style="text-align:center;padding:80px;color:var(--accent-red)">Failed to load data.</div>';
+  }
+}
+
+async function init() {
+  try {
+    const resp = await fetch(CSV_URL);
+    if (!resp.ok) throw new Error();
+    const text = await resp.text();
+    parseData(text);
+    render();
+  } catch(e) {
+    loadFallback();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
