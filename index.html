@@ -101,16 +101,6 @@
       <div class="tm-title-sub" id="subtitle">// Dead cap hit by team by year</div>
     </div>
   </div>
-  <div class="tm-meta">
-    <div class="tm-meta-item">
-      <div class="tm-meta-label">League Total</div>
-      <div class="tm-meta-value" id="kpiTotal">$0</div>
-    </div>
-    <div class="tm-meta-item">
-      <div class="tm-meta-label">Teams</div>
-      <div class="tm-meta-value" id="kpiTeams">0</div>
-    </div>
-  </div>
 </div>
 
 <div class="tm-controls">
@@ -127,6 +117,14 @@
   <span>Updated Daily</span>
 </div>
 
+<script>
+(function(){
+  var _gbi = document.getElementById.bind(document);
+  var _removed = {kpiTeams:1,kpiTotal:1,kpiPayroll:1,kpiPlayers:1,kpiDiff:1,kpiNet:1,kpiPayers:1,kpiTax:1,kpiCount:1,totalPlayers:1,avgSalary:1,totalPayroll:1,totalUnderContract:1,totalProjected:1,totalDifference:1,tenDayCount:1};
+  var _stub = function(){ var s={textContent:'',innerHTML:'',value:'',style:{}}; return s; };
+  document.getElementById = function(id){ var el=_gbi(id); if(el) return el; if(_removed[id]) return _stub(); return null; };
+})();
+</script>
 <script>
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRTwTOS_rNBYI8d8zDUivGFWXsXcxlOZgrqn5o-WCvFC5aNAR3vLsSqllE7aO0BRw/pub?gid=829871333&single=true&output=csv';
 const FALLBACK_B64 = `VGVhbSxQbGF5ZXIsRGVhZCBDYXAgSGl0IDIwMjUtMjAyNixEZWFkIENhcCBIaXQgMjAyNi0yMDI3LERlYWQgQ2FwIEhpdCAyMDI3LTIwMjgsRGVhZCBDYXAgSGl0IDIwMjgtMjAyOSxEZWFkIENhcCBIaXQgMjAyOS0yMDMwLElELCwsVGVhbQpBdGxhbnRhIEhhd2tzLER1b3AgUmVhdGgsIiAkIDIsMjIxLDY3NyAiLCwsLCw=`;
