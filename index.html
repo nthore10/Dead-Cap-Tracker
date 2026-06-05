@@ -98,7 +98,7 @@
     <div class="tm-badge">DC</div>
     <div>
       <div class="tm-title">Dead Cap Tracker</div>
-      <div class="tm-title-sub" id="subtitle">// loading</div>
+      <div class="tm-title-sub" id="subtitle">// Dead cap hit by team by year</div>
     </div>
   </div>
   <div class="tm-meta">
@@ -167,7 +167,7 @@ function updateKPIs(){
   const leagueTotal=sortedTeams.reduce((s,t)=>s+teamTotals[t].totals.reduce((x,v)=>x+v,0),0);
   document.getElementById('kpiTotal').textContent=formatShort(leagueTotal);
   document.getElementById('kpiTeams').textContent=sortedTeams.length;
-  document.getElementById('subtitle').textContent='// '+(yearLabels[0]||'2025-26')+' · '+sortedTeams.length+' teams';
+  document.getElementById('subtitle').textContent='// Dead cap hit by team by year';
 }
 
 function render(){
